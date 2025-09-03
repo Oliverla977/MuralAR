@@ -186,6 +186,10 @@
         gap: 10px;
       }
     }
+    a-scene video, a-scene canvas {
+  object-fit: contain !important;
+}
+
   </style>
 </head>
 <body>
@@ -220,12 +224,14 @@
   </div>
 
   <a-scene
-    vr-mode-ui="enabled: false"
-    renderer="antialias: true; colorManagement: true; precision: medium; alpha: true;"
-    embedded
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
-    loading-screen="enabled: true"
-  >
+  vr-mode-ui="enabled: true"
+  renderer="antialias: true; colorManagement: true; precision: medium; alpha: true;"
+  embedded
+  arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;
+        sourceWidth:1280; sourceHeight:720; displayWidth:1280; displayHeight:720;"
+  loading-screen="enabled: true"
+>
+
     <!-- Assets -->
     <a-assets>
       <a-mixin id="card-base"
@@ -276,7 +282,7 @@
     </a-marker>
 
     <!-- Cámara -->
-    <a-entity camera look-controls wasd-controls="enabled: false"></a-entity>
+    <a-entity camera="fov: 80" look-controls wasd-controls="enabled: false"></a-entity>
   </a-scene>
 
   <script>
