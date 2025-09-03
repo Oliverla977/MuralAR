@@ -297,25 +297,25 @@
     // Datos de los beneficios
     const benefitsData = [
       {
-        title: "Estandarización de Procesos",
+        title: "Estandarizacion de Procesos",
         icon: "⚙️",
         benefits: [
-          "• Unificación de procedimientos TI",
-          "• Reducción de complejidad operativa", 
+          "• Unificacion de procedimientos TI",
+          "• Reduccion de complejidad operativa", 
           "• Mejores prácticas implementadas",
-          "• Consistencia en toda la organización"
+          "• Consistencia en toda la organizacion"
         ],
         color: "#2196F3",
         gradient: "linear-gradient(135deg, #2196F3, #1976D2)"
       },
       {
-        title: "Optimización de Recursos",
+        title: "Optimizacion de Recursos",
         icon: "🚀",
         benefits: [
-          "• Consolidación de infraestructura",
-          "• Reducción de costos operativos",
+          "• Consolidacion de infraestructura",
+          "• Reduccion de costos operativos",
           "• Mayor eficiencia energética",
-          "• Optimización de licenciamiento"
+          "• Optimizacion de licenciamiento"
         ],
         color: "#4CAF50",
         gradient: "linear-gradient(135deg, #4CAF50, #388E3C)"
@@ -326,14 +326,14 @@
         benefits: [
           "• Controles de acceso robustos",
           "• Encriptación de datos avanzada",
-          "• Auditoría y compliance mejorados",
+          "• Auditoria y compliance mejorados",
           "• Protección contra amenazas"
         ],
         color: "#FF9800",
         gradient: "linear-gradient(135deg, #FF9800, #F57C00)"
       },
       {
-        title: "Análisis en Tiempo Real",
+        title: "Analisis en Tiempo Real",
         icon: "📊",
         benefits: [
           "• Monitoreo continuo de sistemas",
@@ -362,7 +362,7 @@
         benefits: [
           "• Procesos automatizados",
           "• Reducción de errores humanos",
-          "• Liberación de recursos técnicos",
+          "• Liberación de recursos tecnicos",
           "• Mejora en productividad"
         ],
         color: "#00BCD4",
@@ -727,5 +727,108 @@
       setTimeout(adjustMobileViewport, 500);
     });
   </script>
+  <script>
+/* 1) Wrap getUserMedia to prefer back camera + sensible resolution */
+(function() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  const orig = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = (constraints) => {
+    try {
+      if (constraints && constraints.video !== undefined) {
+        const prefer = {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        };
+        // merge (preserve existing fields)
+        constraints = Object.assign({}, constraints, {
+          video: Object.assign({}, constraints.video || {}, prefer)
+        });
+      }
+    } catch (e) {
+      console.warn('getUserMedia wrapper error', e);
+    }
+    return orig(constraints);
+  };
+})();
+
+/* 2) After A-Frame / AR.js is ready, tweak the injected video/canvas and force resize */
+document.addEventListener('DOMContentLoaded', () => {
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
+
+  scene.addEventListener('loaded', () => {
+    // small delay para que AR.js haya creado los elementos
+    setTimeout(() => {
+      try {
+        const arSys = (scene.systems && scene.systems['arjs']) || null;
+        const sourceDom = arSys && arSys.arToolkitSource && arSys.arToolkitSource.domElement;
+        const video = sourceDom && sourceDom.tagName === 'VIDEO' ? sourceDom : document.querySelector('video');
+
+        if (video) {
+          // CSS que evita que el UA "rellene/zoom" el video
+          video.style.objectFit = 'contain';
+          video.style.objectPosition = 'center center';
+          video.style.transform = 'none';
+          video.style.width = '100%';
+          video.style.height = '100%';
+          video.style.maxWidth = '100%';
+          video.style.maxHeight = '100%';
+        }
+
+        // canvas (AR.js/three canvas) - también limpiamos transform
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+          canvas.style.objectFit = 'contain';
+          canvas.style.transform = 'none';
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
+        }
+
+        // 3) Si el track soporta zoom, intentar forzarlo a 1 (o al min)
+        try {
+          const stream = video && video.srcObject;
+          const track = stream && stream.getVideoTracks && stream.getVideoTracks()[0];
+          if (track && track.getCapabilities) {
+            const caps = track.getCapabilities();
+            if ('zoom' in caps) {
+              const zoomTo = caps.zoom.min || 1;
+              track.applyConstraints({ advanced: [{ zoom: zoomTo }] })
+                   .then(() => console.log('applied zoom', zoomTo))
+                   .catch(err => console.warn('no se pudo aplicar zoom constraint', err));
+            }
+          }
+        } catch (e) {
+          console.warn('error intentando set zoom', e);
+        }
+
+        // Forzar re-resize en AR.js (si está disponible)
+        if (arSys && arSys.arToolkitSource) {
+          try {
+            if (typeof arSys.arToolkitSource.onResizeElement === 'function') {
+              arSys.arToolkitSource.onResizeElement();
+            }
+            if (typeof arSys.arToolkitSource.copyElementSizeTo === 'function' && arSys.arToolkitContext && arSys.arToolkitContext.canvas) {
+              arSys.arToolkitSource.copyElementSizeTo(arSys.arToolkitContext.canvas);
+            }
+          } catch (e) { console.warn('error forzando resize AR.js', e); }
+        }
+
+        // Fallback visual: reducir un poco la escala del contenido para compensar "zoom" extremo
+        const group = document.getElementById('image-group');
+        if (group) {
+          // Ajusta el valor si quieres más/menos reducción
+          group.setAttribute('scale', '0.6 0.6 0.6');
+        }
+
+      } catch (err) {
+        console.error('post-load AR fixes failed', err);
+      }
+    }, 600); // pequeña espera
+  });
+});
+</script>
+
 </body>
 </html>
