@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR Tarjeta Interactiva - Módulos SAP HANA</title>
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- AR.js para A-Frame -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <style>
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      font-family: system-ui, sans-serif;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    .ui-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+    
+    .hint { 
+      position: fixed; 
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 80px; 
+      padding: 10px 16px; 
+      background: rgba(0,0,0,0.85); 
+      color: #fff; 
+      border-radius: 20px;
+      font-size: 13px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      max-width: 85%;
+      text-align: center;
+      pointer-events: auto;
+      animation: fadeIn 0.5s ease-out;
+    }
+    
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: auto;
+    }
+    
+    .benefits-btn {
+      padding: 12px 24px;
+      border-radius: 25px;
+      border: none;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      min-width: 140px;
+      text-align: center;
+    }
+    
+    .benefits-btn:hover, .benefits-btn:active {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+    
+    .status-indicator {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 16px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border-radius: 15px;
+      font-size: 12px;
+      pointer-events: auto;
+    }
+    
+    .marker-found { background: rgba(76, 175, 80, 0.9); }
+    .marker-lost { background: rgba(244, 67, 54, 0.9); }
+    
+    #patternMarker {
+      display: none;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    
+    .pulsing {
+      animation: pulse 2s infinite;
+    }
+
+    /* Optimización para móviles */
+    @media (max-width: 768px) {
+      .hint {
+        font-size: 12px;
+        bottom: 70px;
+        padding: 8px 14px;
+        max-width: 90%;
+      }
+      
+      .benefits-btn {
+        font-size: 14px;
+        padding: 10px 20px;
+        min-width: 120px;
+      }
+      
+      .status-indicator {
+        font-size: 11px;
+        padding: 6px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ui-overlay">
+    <div class="status-indicator" id="status">
+      Iniciando AR...
+    </div>
+    
+    <div class="hint" id="hint">
+      Apunta la cámara a la tarjeta con el marcador
+    </div>
+    
+    <div class="controls">
+      <button class="benefits-btn" onclick="window.location.href='beneficios.html'">
+        Ver Beneficios
+      </button>
+    </div>
+  </div>
+
+  <img id="patternMarker" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/sdinicio.png" alt="Pattern Marker">
+
+  <a-scene
+    vr-mode-ui="enabled: true"
+    renderer="antialias: true; colorManagement: true; precision: medium; alpha: true;"
+    embedded
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    loading-screen="enabled: true"
+  >
+    <!-- Assets con imágenes -->
+    <a-assets>
+      <img id="img1" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/evos4h.png" crossorigin="anonymous">
+      <img id="img2" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/Apli_SD.png" crossorigin="anonymous">
+      <img id="img3" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/CO.png" crossorigin="anonymous">
+      <img id="img4" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/EWM.png" crossorigin="anonymous">
+      <img id="img5" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/FI.png" crossorigin="anonymous">
+      <img id="img6" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/HCM.png" crossorigin="anonymous">
+      <img id="img7" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/MM.png" crossorigin="anonymous">
+      <img id="img8" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/PM.png" crossorigin="anonymous">
+      <img id="img9" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/PP.png" crossorigin="anonymous">
+      <img id="img10" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/QM.png" crossorigin="anonymous">
+      <img id="img11" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/SD.png" crossorigin="anonymous">
+      <a-asset-item id="eva" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/EvaBot.glb"></a-asset-item>
+      <a-asset-item id="walle" src="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/asset/WalleBot.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Luces optimizadas para vista de tarjeta -->
+    <a-entity light="type: ambient; intensity: 0.7; color: #ffffff"></a-entity>
+    <a-entity light="type: directional; intensity: 1; color: #ffffff" position="1 2 1"></a-entity>
+    <a-entity light="type: point; intensity: 0.4; color: #ffffff" position="0 1.5 0.5"></a-entity>
+
+    <!-- Marcador -->
+    <a-marker 
+      type="pattern" 
+      url="https://raw.githubusercontent.com/mago5560/mural-evos4hana/main/pattern-sdinicio.patt"
+      id="marker"
+      smooth="true"
+      smoothCount="10"
+      smoothTolerance="0.01"
+      smoothThreshold="5">
+      
+      <!-- Contenedor de las imágenes ajustado para vista de tarjeta -->
+      <a-entity id="image-group" position="0 0.5 0" rotation="0 0 0"></a-entity>
+      
+      <!-- Modelo 3D Eva posicionado para vista de tarjeta -->
+      <a-entity 
+        id="eva-entity" 
+        position="-2.5 0.8 0.5" 
+        rotation="0 20 0" 
+        scale="0.6 0.6 0.6"
+        gltf-model="#eva" 
+        animation-mixer="clip: *">
+      </a-entity>
+      
+      <!-- Modelo 3D Wall-E posicionado para vista de tarjeta -->
+      <a-entity 
+        id="walle-entity" 
+        position="2.5 0.8 0.5" 
+        rotation="0 -20 0" 
+        scale="0.6 0.6 0.6"
+        gltf-model="#walle" 
+        animation-mixer="clip: *">
+      </a-entity>
+      
+      <!-- Base decorativa -->
+      <a-cylinder 
+        position="0 0.02 0"
+        radius="3.5" 
+        height="0.04" 
+        color="#e3f2fd" 
+        opacity="0.3">
+      </a-cylinder>
+    </a-marker>
+
+    <!-- Cámara -->
+    <a-entity camera look-controls wasd-controls="enabled: false"></a-entity>
+  </a-scene>
+
+  <script>
+    // Configuración optimizada para vista de tarjeta
+    const CONFIG = {
+      RING_RADIUS: 2.8,
+      Y_POSITION: 0.5,
+      IMAGE_SCALE: {x: 1.2, y: 0.6, z: 1},
+      CENTER_SCALE: {x: 2.2, y: 1.1, z: 1},
+      ANIMATION_INTERVAL: 8000, // 8 segundos
+      ROTATION_SPEED: 30000, // 30 segundos por rotación completa
+    };
+
+    const group = document.getElementById('image-group');
+    const images = [
+      '#img1','#img2','#img3','#img4','#img5',
+      '#img6','#img7','#img8','#img9','#img10', '#img11'
+    ];
+
+    let currentCenterIndex = 0;
+    let animationTimer;
+    let rotationAnimation;
+
+    // Crear imagen con orientación para tarjeta
+    function createImagePlane(id, src, position, scale = CONFIG.IMAGE_SCALE, isCenter = false) {
+      const e = document.createElement('a-plane');
+      e.setAttribute('id', id);
+      e.setAttribute('material', `src: ${src}; side: double; transparent: true; alphaTest: 0.1`);
+      e.setAttribute('geometry', `width: ${scale.x}; height: ${scale.y}`);
+      e.setAttribute('position', position);
+      e.setAttribute('rotation', '0 0 0'); // Orientación vertical para vista de tarjeta
+      
+      return e;
+    }
+
+    // Calcular posiciones en círculo para vista de tarjeta
+    function calculateRingPositions(count) {
+      const positions = [];
+      const angleStep = (Math.PI * 2) / (count - 1);
+      
+      for (let i = 0; i < count - 1; i++) {
+        const angle = i * angleStep;
+        const x = CONFIG.RING_RADIUS * Math.cos(angle);
+        const z = CONFIG.RING_RADIUS * Math.sin(angle);
+        positions.push({x, y: CONFIG.Y_POSITION, z});
+      }
+      
+      return positions;
+    }
+
+    // Inicializar imágenes
+    function initializeImages() {
+      // Imagen central
+      const center = createImagePlane(
+        'img-center', 
+        images[0], 
+        `0 ${CONFIG.Y_POSITION} 0`, 
+        CONFIG.CENTER_SCALE, 
+        true
+      );
+      center.dataset.index = '0';
+      group.appendChild(center);
+
+      // Imágenes del anillo
+      const ringPositions = calculateRingPositions(images.length);
+      
+      for (let i = 1; i < images.length; i++) {
+        const pos = ringPositions[i - 1];
+        const posStr = `${pos.x.toFixed(2)} ${pos.y} ${pos.z.toFixed(2)}`;
+        
+        const plane = createImagePlane(`img-${i}`, images[i], posStr);
+        plane.dataset.index = i.toString();
+        plane.dataset.ringPosition = posStr;
+        
+        group.appendChild(plane);
+      }
+    }
+
+    // Animación de cambio automático de imagen central
+    function rotateImages() {
+      const currentCenter = group.querySelector('#img-center');
+      const nextIndex = (currentCenterIndex + 1) % images.length;
+      
+      // Encontrar la siguiente imagen
+      const nextImage = group.querySelector(`[data-index="${nextIndex}"]`);
+      if (!nextImage) return;
+
+      // Intercambiar posiciones con animación suave
+      const centerPos = `0 ${CONFIG.Y_POSITION} 0`;
+      const ringPos = nextImage.dataset.ringPosition || `${CONFIG.RING_RADIUS} ${CONFIG.Y_POSITION} 0`;
+
+      // Animar imagen actual al anillo
+      currentCenter.setAttribute('animation', {
+        property: 'position',
+        to: ringPos,
+        dur: 1500,
+        easing: 'easeInOutCubic'
+      });
+      
+      currentCenter.setAttribute('animation__scale', {
+        property: 'geometry',
+        to: `width: ${CONFIG.IMAGE_SCALE.x}; height: ${CONFIG.IMAGE_SCALE.y}`,
+        dur: 1500,
+        easing: 'easeInOutCubic'
+      });
+
+      // Animar nueva imagen al centro
+      nextImage.setAttribute('animation', {
+        property: 'position',
+        to: centerPos,
+        dur: 1500,
+        easing: 'easeInOutCubic'
+      });
+      
+      nextImage.setAttribute('animation__scale', {
+        property: 'geometry',
+        to: `width: ${CONFIG.CENTER_SCALE.x}; height: ${CONFIG.CENTER_SCALE.y}`,
+        dur: 1500,
+        easing: 'easeInOutCubic'
+      });
+
+      // Actualizar referencias
+      currentCenter.id = `img-ring-${currentCenterIndex}`;
+      currentCenter.dataset.ringPosition = ringPos;
+      
+      nextImage.id = 'img-center';
+      delete nextImage.dataset.ringPosition;
+      
+      currentCenterIndex = nextIndex;
+      
+      updateHint(`Módulo ${getModuleName(nextIndex)}`);
+    }
+
+    // Obtener nombre del módulo
+    function getModuleName(index) {
+      const names = [
+        'SAP HANA Evolution', 'Application Studio', 'Controlling', 'Warehouse Management',
+        'Finance', 'Human Capital Management', 'Materials Management', 'Plant Maintenance',
+        'Production Planning', 'Quality Management', 'Sales & Distribution'
+      ];
+      return names[index] || `Módulo ${index + 1}`;
+    }
+
+    // Animaciones automáticas para modelos 3D
+    function startRobotAnimations() {
+      const eva = document.getElementById('eva-entity');
+      const walle = document.getElementById('walle-entity');
+
+      // Eva: flotación y rotación suave
+      eva.setAttribute('animation__float', {
+        property: 'position',
+        to: '-2.5 1.1 0.5',
+        dur: 4000,
+        direction: 'alternate',
+        repeat: 'indefinite',
+        easing: 'easeInOutSine'
+      });
+      
+      eva.setAttribute('animation__rotate', {
+        property: 'rotation',
+        to: '0 380 0',
+        dur: CONFIG.ROTATION_SPEED,
+        repeat: 'indefinite',
+        easing: 'linear'
+      });
+
+      // Wall-E: movimiento de balanceo y rotación
+      walle.setAttribute('animation__sway', {
+        property: 'position',
+        to: '2.8 0.9 0.3',
+        dur: 3500,
+        direction: 'alternate',
+        repeat: 'indefinite',
+        easing: 'easeInOutSine'
+      });
+      
+      walle.setAttribute('animation__rotate', {
+        property: 'rotation',
+        to: '0 -380 0',
+        dur: CONFIG.ROTATION_SPEED,
+        repeat: 'indefinite',
+        easing: 'linear'
+      });
+
+      // Rotación del grupo de imágenes
+      group.setAttribute('animation__group_rotate', {
+        property: 'rotation',
+        to: '0 360 0',
+        dur: CONFIG.ROTATION_SPEED * 2,
+        repeat: 'indefinite',
+        easing: 'linear'
+      });
+    }
+
+    // Actualizar hint
+    function updateHint(message) {
+      const hint = document.getElementById('hint');
+      hint.textContent = message;
+      hint.classList.add('pulsing');
+      
+      setTimeout(() => {
+        hint.classList.remove('pulsing');
+      }, 3000);
+    }
+
+    // Event listeners para estados del marcador
+    const marker = document.getElementById('marker');
+    const statusEl = document.getElementById('status');
+
+    marker.addEventListener('markerFound', () => {
+      statusEl.textContent = '✓ Marcador detectado';
+      statusEl.className = 'status-indicator marker-found';
+      updateHint('¡Perfecto! Mantén la tarjeta visible');
+      
+      // Iniciar animaciones automáticas
+      if (!animationTimer) {
+        animationTimer = setInterval(rotateImages, CONFIG.ANIMATION_INTERVAL);
+        startRobotAnimations();
+      }
+    });
+    
+    marker.addEventListener('markerLost', () => {
+      statusEl.textContent = '⚠ Buscando marcador...';
+      statusEl.className = 'status-indicator marker-lost';
+      updateHint('Apunta la cámara a la tarjeta');
+      
+      // Pausar animaciones cuando se pierde el marcador
+      if (animationTimer) {
+        clearInterval(animationTimer);
+        animationTimer = null;
+      }
+    });
+
+    // Prevenir comportamientos por defecto en móviles
+    document.addEventListener('touchmove', (e) => { 
+      e.preventDefault(); 
+    }, { passive: false });
+
+    document.addEventListener('touchstart', (e) => { 
+      e.preventDefault(); 
+    }, { passive: false });
+
+    // Inicialización
+    initializeImages();
+    
+    setTimeout(() => {
+      statusEl.textContent = 'Listo - Busca la tarjeta';
+      statusEl.className = 'status-indicator';
+      updateHint('Apunta la cámara hacia el marcador en tu tarjeta');
+    }, 1500);
+  </script>
+</body>
+</html>
